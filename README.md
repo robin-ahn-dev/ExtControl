@@ -34,13 +34,28 @@ viele Endungen gleichzeitig.
 
 ## Installation
 
-Fertiges Bundle bauen:
+### Fertiges DMG
+
+Neuestes `ExtControl-x.y.dmg` unter [Releases](../../releases) laden, öffnen und
+ExtControl in den Ordner *Programme* ziehen.
+
+Die App ist nur ad-hoc signiert (kein Apple Developer Account). Beim ersten Start
+meldet Gatekeeper „nicht verifizierter Entwickler". Entweder Rechtsklick auf die App
+-> **Öffnen** -> **Öffnen**, oder einmalig:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/ExtControl.app
+```
+
+### Selbst bauen
 
 ```bash
 git clone https://github.com/<user>/ExtControl.git
 cd ExtControl
-./build_app.sh
+./build_app.sh          # -> dist/ExtControl.app
 open dist/ExtControl.app
+
+./make_dmg.sh 1.0       # -> dist/ExtControl-1.0.dmg (gestaltetes Fenster)
 ```
 
 Oder direkt starten:
@@ -50,6 +65,23 @@ swift run -c release
 ```
 
 Voraussetzungen: macOS 13+, Xcode Command Line Tools (Swift 5.9).
+
+### Release veröffentlichen
+
+Tag pushen — GitHub Actions (`.github/workflows/release.yml`) baut das DMG auf einem
+macOS-Runner und hängt es an den Release:
+
+```bash
+git tag v1.0
+git push origin v1.0
+```
+
+Manuell geht auch:
+
+```bash
+./make_dmg.sh 1.0
+gh release create v1.0 dist/ExtControl-1.0.dmg --title "ExtControl 1.0" --generate-notes
+```
 
 ## Bedienung
 
@@ -100,8 +132,35 @@ genutzt; ExtControl arbeitet mit Verzeichnis-Scan und öffentlichen APIs.
 | `Views/ExtensionListView.swift` | Endungs-Tabelle mit Inline-Menü |
 | `Views/ExtensionDetailView.swift` | Detail: Kandidaten-Apps, Standard setzen |
 | `Views/AppDetailView.swift` | Detail der App-Ansicht |
+| `build_app.sh` | Baut `dist/ExtControl.app` inkl. Info.plist und Icon |
+| `make_dmg.sh` | Baut die App und packt sie als DMG |
 | `tools/MakeIcon.swift` | Rendert das App-Icon (`Resources/AppIcon.iconset`) |
+| `tools/MakeDMGBackground.swift` | Rendert den DMG-Hintergrund (TIFF, 1x + 2x) |
+| `Resources/dmg-DS_Store` | Gesichertes DMG-Fensterlayout für CI-Builds |
 | `docs/` | Icon und Screenshot für die README |
+
+## DMG-Layout
+
+`make_dmg.sh` baut ein DMG mit Hintergrundbild, festen Icon-Positionen (App links,
+`/Applications`-Symlink rechts, Pfeil dazwischen), ausgeblendeter Toolbar und
+Volume-Icon.
+
+Ablauf: App bauen -> Staging-Ordner -> beschreibbares UDRW-Image -> Finder per
+AppleScript einrichten -> Layout als `.DS_Store` sichern -> nach UDZO komprimieren.
+
+- Beim ersten Lauf fragt macOS nach der Berechtigung, den **Finder** zu steuern
+  (Systemeinstellungen -> Datenschutz -> Automation).
+- Auf CI (`$CI` gesetzt) oder mit `NO_FINDER=1` wird das eingecheckte
+  `Resources/dmg-DS_Store` verwendet, statt den Finder zu steuern — GitHub-Runner
+  haben keine nutzbare Finder-Session.
+- Positionen und Fenstergröße stehen als Variablen oben in `make_dmg.sh`; das
+  Hintergrundbild wird von `tools/MakeDMGBackground.swift` gerendert
+  (Multi-Resolution-TIFF, 1x + 2x).
+
+```bash
+swift tools/MakeDMGBackground.swift Resources/dmg-background.tiff
+./make_dmg.sh 1.0
+```
 
 ## Icon neu bauen
 

@@ -6,8 +6,11 @@ Package.resolved
 # Build-Output
 dist/
 
-# Generierte Icon-Zwischendateien (AppIcon.icns bleibt eingecheckt)
+# Generierte Grafik-Zwischendateien
+# (AppIcon.icns und Resources/dmg-DS_Store bleiben eingecheckt)
 Resources/AppIcon.iconset/
+Resources/dmg-background.tiff
+Resources/dmg-background-preview.png
 
 # Xcode
 *.xcodeproj/
